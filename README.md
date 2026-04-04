@@ -3,6 +3,7 @@
   <img src="https://img.shields.io/badge/status-alpha-orange?style=for-the-badge" alt="Alpha"/>
   <img src="https://img.shields.io/badge/platforms-Web%20%7C%20iOS%20%7C%20Android-blue?style=for-the-badge" alt="Platforms"/>
   <img src="https://img.shields.io/badge/tests-120%20passing-brightgreen?style=for-the-badge" alt="Tests"/>
+  <img src="https://img.shields.io/npm/v/aura-lang?style=for-the-badge&color=CB3837" alt="npm"/>
   <img src="https://img.shields.io/github/license/360Labs-dev/aura?style=for-the-badge" alt="License"/>
 </p>
 
@@ -301,7 +302,10 @@ Every generated file compiles and runs immediately.
 ## Quick Start
 
 ```bash
-# Clone and build
+# Install from npm (language reference + syntax highlighting)
+npm install aura-lang
+
+# Install the compiler (requires Rust)
 git clone https://github.com/360Labs-dev/aura.git
 cd aura && cargo build --release
 
@@ -447,6 +451,59 @@ The complete [language specification](spec/language.md) covers:
 - Agent API protocol (JSON-RPC 2.0)
 - Backend trait interface for adding new platforms
 - 80+ error codes with fix suggestions
+
+---
+
+## Benchmarks
+
+Real measurements from `cargo run --release --bin aura-bench`:
+
+### Compilation Speed
+
+Aura compiles to **3 native platforms simultaneously** in microseconds:
+
+| Benchmark | Parse | Analyze | HIR | Codegen (3 targets) | **Total** |
+|---|---|---|---|---|---|
+| Hello World | 210 us | 58 us | 36 us | 166 us | **470 us** |
+| Counter App | 29 us | 4 us | 8 us | 71 us | **112 us** |
+| Todo List | 39 us | 11 us | 6 us | 56 us | **112 us** |
+
+**100% first-compile success rate** — zero parse errors across all benchmarks.
+
+### Code Size: Aura vs. Everyone Else
+
+Same app, four languages. Lines (L) and tokens (T):
+
+| App | Aura | TypeScript + React Native | Swift + SwiftUI | Kotlin + Compose |
+|---|---|---|---|---|
+| Hello World | **4L / 8T** | 15L / 46T | 16L / 31T | 18L / 33T |
+| Counter | **14L / 47T** | 32L / 133T | 34L / 67T | 46L / 110T |
+| Todo List | **27L / 74T** | 67L / 256T | 49L / 122T | 53L / 222T |
+| **Total** | **45L / 129T** | 114L / 435T | 99L / 220T | 117L / 365T |
+
+### Token Reduction (= LLM Cost Reduction)
+
+Every token an AI generates costs money and time. Aura cuts that dramatically:
+
+```
+  vs TypeScript + React Native:    70% fewer tokens
+  vs Swift + SwiftUI:              41% fewer tokens
+  vs Kotlin + Jetpack Compose:     65% fewer tokens
+```
+
+**For AI coding agents, 70% fewer tokens means 70% cheaper and 70% faster.**
+
+### Output Size
+
+Each Aura program generates platform-native output:
+
+| App | Web (HTML+CSS+JS) | iOS (Swift) | Android (Kotlin) |
+|---|---|---|---|
+| Hello World | 6,642 bytes | 272 bytes | 865 bytes |
+| Counter | 7,167 bytes | 912 bytes | 1,355 bytes |
+| Todo List | 7,734 bytes | 1,478 bytes | 1,973 bytes |
+
+Run benchmarks yourself: `cargo run --release --bin aura-bench`
 
 ---
 

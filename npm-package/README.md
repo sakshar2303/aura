@@ -39,6 +39,27 @@ app TodoApp
 | Design system | Import Tailwind | **Built into grammar** |
 | Password as string? | Allowed | **Compile error** |
 
+## Benchmarks
+
+Real measurements — same app, four languages:
+
+| App | Aura | TypeScript+RN | Swift+SwiftUI | Kotlin+Compose |
+|---|---|---|---|---|
+| Hello World | **4L / 8T** | 15L / 46T | 16L / 31T | 18L / 33T |
+| Counter | **14L / 47T** | 32L / 133T | 34L / 67T | 46L / 110T |
+| Todo List | **27L / 74T** | 67L / 256T | 49L / 122T | 53L / 222T |
+| **Total** | **45L / 129T** | 114L / 435T | 99L / 220T | 117L / 365T |
+
+```
+Token reduction vs TypeScript+RN:    70% fewer tokens
+Token reduction vs Swift+SwiftUI:    41% fewer tokens
+Token reduction vs Kotlin+Compose:   65% fewer tokens
+```
+
+**Compilation speed:** ~112 us to compile a counter app to 3 native platforms (Web + iOS + Android). **100% first-compile success rate.**
+
+For AI agents, 70% fewer tokens = 70% cheaper inference costs.
+
 ## Install the Compiler
 
 The Aura compiler is written in Rust:

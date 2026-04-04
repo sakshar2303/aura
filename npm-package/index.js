@@ -19,7 +19,7 @@ const path = require('path');
 
 module.exports = {
   name: 'aura-lang',
-  version: '0.1.0',
+  version: '0.1.1',
 
   /**
    * Path to the TextMate grammar file for Aura syntax highlighting.

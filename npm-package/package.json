@@ -1,6 +1,6 @@
 {
   "name": "aura-lang",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "The Aura programming language — AI-first, cross-platform, built-in design system. Write once, compile to native SwiftUI, Jetpack Compose, and HTML/CSS/JS.",
   "author": "360 Labs <dev@360labs.ai>",
   "license": "MIT",
