@@ -117,9 +117,7 @@ fn main() {
             output,
             format,
         } => build_command(&target, &path, &output, format.as_deref()),
-        Commands::Run { target, preview, port } => {
-            eprintln!("  aura run not yet implemented (dev server coming in Phase 2)");
-        }
+        Commands::Run { target, preview, port } => run_command(&target, port),
         Commands::Fmt { path, check } => fmt_command(&path, check),
         Commands::Explain { file } => explain_command(&file),
         Commands::Diff { a, b } => diff_command(&a, &b),
@@ -587,6 +585,114 @@ default = "modern.light"
     eprintln!("    cd {}", name);
     eprintln!("    aura build src/main.aura --target web");
     eprintln!("    aura build src/main.aura --target all");
+}
+
+fn run_command(target: &str, port: u16) {
+    use std::io::{Read as _, Write as _};
+    use std::net::TcpListener;
+
+    // Find .aura file
+    let source_file = if Path::new("src/main.aura").exists() {
+        "src/main.aura".to_string()
+    } else {
+        // Find any .aura file in current dir
+        let mut found = None;
+        if let Ok(entries) = std::fs::read_dir(".") {
+            for entry in entries.flatten() {
+                if entry.path().extension().map(|e| e == "aura").unwrap_or(false) {
+                    found = Some(entry.path().to_string_lossy().to_string());
+                    break;
+                }
+            }
+        }
+        match found {
+            Some(f) => f,
+            None => {
+                eprintln!("  error: No .aura file found. Create src/main.aura or specify a file.");
+                std::process::exit(1);
+            }
+        }
+    };
+
+    eprintln!();
+    eprintln!("  aura run — dev server");
+    eprintln!("  Source: {}", source_file);
+    eprintln!();
+
+    // Build
+    let build_dir = "build/dev";
+    build_command(target, &source_file, build_dir, None);
+
+    // Inject live-reload script into HTML
+    let html_path = Path::new(build_dir).join("index.html");
+    if let Ok(html) = std::fs::read_to_string(&html_path) {
+        let reload_script = format!(
+            "<script>setInterval(()=>fetch('/ping').catch(()=>location.reload()),2000)</script>"
+        );
+        let patched = html.replace("</body>", &format!("{}\n</body>", reload_script));
+        std::fs::write(&html_path, patched).ok();
+    }
+
+    // Start HTTP server
+    let addr = format!("127.0.0.1:{}", port);
+    let listener = match TcpListener::bind(&addr) {
+        Ok(l) => l,
+        Err(e) => {
+            eprintln!("  error: Cannot bind to {}: {}", addr, e);
+            eprintln!("  hint: Try a different port with -p");
+            std::process::exit(1);
+        }
+    };
+
+    eprintln!("  Server running at http://{}", addr);
+    eprintln!("  Press Ctrl+C to stop");
+    eprintln!();
+
+    for stream in listener.incoming() {
+        if let Ok(mut stream) = stream {
+            let mut buf = [0u8; 4096];
+            let n = stream.read(&mut buf).unwrap_or(0);
+            let request = String::from_utf8_lossy(&buf[..n]);
+
+            // Parse request path
+            let path = request
+                .lines()
+                .next()
+                .and_then(|line| line.split_whitespace().nth(1))
+                .unwrap_or("/");
+
+            let file_path = if path == "/" || path == "/index.html" {
+                format!("{}/index.html", build_dir)
+            } else if path == "/ping" {
+                // Live-reload ping
+                let response = "HTTP/1.1 200 OK\r\nContent-Length: 2\r\n\r\nok";
+                stream.write_all(response.as_bytes()).ok();
+                continue;
+            } else {
+                format!("{}{}", build_dir, path)
+            };
+
+            let (status, content_type, body) = if let Ok(body) = std::fs::read(&file_path) {
+                let ct = match Path::new(&file_path).extension().and_then(|e| e.to_str()) {
+                    Some("html") => "text/html; charset=utf-8",
+                    Some("css") => "text/css; charset=utf-8",
+                    Some("js") => "application/javascript; charset=utf-8",
+                    Some("json") => "application/json; charset=utf-8",
+                    _ => "application/octet-stream",
+                };
+                ("200 OK", ct, body)
+            } else {
+                ("404 Not Found", "text/plain", b"Not found".to_vec())
+            };
+
+            let response = format!(
+                "HTTP/1.1 {}\r\nContent-Type: {}\r\nContent-Length: {}\r\nAccess-Control-Allow-Origin: *\r\n\r\n",
+                status, content_type, body.len()
+            );
+            stream.write_all(response.as_bytes()).ok();
+            stream.write_all(&body).ok();
+        }
+    }
 }
 
 fn agent_serve() {

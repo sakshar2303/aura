@@ -875,14 +875,59 @@ impl SemanticAnalyzer {
                     AuraType::Poison
                 }
             }
-            Expr::MemberAccess(obj, _member, _span) => {
+            Expr::MemberAccess(obj, member, _span) => {
                 let obj_type = self.infer_expr_type(obj);
                 if obj_type.is_poison() {
                     return AuraType::Poison;
                 }
-                // For now, return Poison for unresolved member access
-                // Full member resolution requires model field lookup
-                AuraType::Poison
+                // Look up member on the resolved type
+                match &obj_type {
+                    AuraType::Named(type_name) => {
+                        // Search model fields in the symbol table
+                        if let Some(model_scope) = self.symbols.scopes.iter().find(|s| s.name == *type_name) {
+                            if let Some(field) = model_scope.symbols.get(member.as_str()) {
+                                return field.resolved_type.clone();
+                            }
+                        }
+                        // Common built-in members
+                        match member.as_str() {
+                            "count" => AuraType::Primitive(PrimitiveType::Int),
+                            "isEmpty" => AuraType::Primitive(PrimitiveType::Bool),
+                            "toText" | "toText()" => AuraType::Primitive(PrimitiveType::Text),
+                            _ => AuraType::Poison, // Unknown field
+                        }
+                    }
+                    AuraType::List(inner) => {
+                        match member.as_str() {
+                            "count" | "count()" => AuraType::Primitive(PrimitiveType::Int),
+                            "isEmpty" => AuraType::Primitive(PrimitiveType::Bool),
+                            "first" | "last" => AuraType::Optional(inner.clone()),
+                            _ => AuraType::Poison,
+                        }
+                    }
+                    AuraType::Primitive(PrimitiveType::Text) => {
+                        match member.as_str() {
+                            "count" | "count()" => AuraType::Primitive(PrimitiveType::Int),
+                            "isEmpty" => AuraType::Primitive(PrimitiveType::Bool),
+                            "trim" | "uppercase" | "lowercase" => AuraType::Primitive(PrimitiveType::Text),
+                            _ => AuraType::Poison,
+                        }
+                    }
+                    AuraType::Primitive(PrimitiveType::Int) | AuraType::Primitive(PrimitiveType::Float) => {
+                        match member.as_str() {
+                            "toFloat" => AuraType::Primitive(PrimitiveType::Float),
+                            "toInt" => AuraType::Primitive(PrimitiveType::Int),
+                            "toText" => AuraType::Primitive(PrimitiveType::Text),
+                            "abs" => obj_type.clone(),
+                            _ => AuraType::Poison,
+                        }
+                    }
+                    AuraType::Optional(inner) => {
+                        // Accessing members on optional — pass through to inner type
+                        AuraType::Poison // Should use nil-check first
+                    }
+                    _ => AuraType::Poison,
+                }
             }
             Expr::Call(func, _args, _span) => {
                 let func_type = self.infer_expr_type(func);

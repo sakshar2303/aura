@@ -856,10 +856,13 @@ impl Parser {
                     }
                 }
                 Some(Token::Ident(_)) | Some(Token::TypeIdent(_)) => {
-                    // Could be a prop assignment (name: value) or an expression
-                    // Lookahead: if next is Colon, it's a prop — handle in props parsing
+                    // Could be a prop assignment (name: value), a compound design token,
+                    // or an expression argument
                     if self.is_prop_assign_ahead() {
                         break;
+                    }
+                    if self.is_compound_design_token_ahead() {
+                        break; // Let parse_design_tokens_and_props handle it
                     }
                     if let Some(expr) = self.parse_expression() {
                         args.push(expr);
@@ -1808,7 +1811,18 @@ impl Parser {
         let mut expr = self.parse_primary()?;
 
         loop {
-            if self.eat(&Token::Dot) {
+            if self.check(&Token::Dot) {
+                // Don't consume `.` if it starts a design token (e.g., .accent, .bold)
+                // Only break for unambiguous design tokens — tokens that are NEVER
+                // valid member names (bold, italic, accent, etc.)
+                // Tokens like `light`, `medium`, `normal` are ambiguous and should
+                // still allow member access (modern.light, priority.medium)
+                if let Some(Token::Ident(next_name)) = self.tokens.get(self.pos + 1).map(|t| &t.value) {
+                    if is_unambiguous_design_token(next_name) {
+                        break; // Let the caller handle design tokens
+                    }
+                }
+                self.advance(); // eat the dot
                 let span = self.peek_span();
                 let (member, _) = self.expect_ident().ok()?;
                 expr = Expr::MemberAccess(Box::new(expr), member, span);
@@ -2154,6 +2168,22 @@ fn is_compound_token_prefix(name: &str) -> bool {
         "gap" | "padding" | "margin" | "size" | "width" | "height"
             | "radius" | "shadow" | "elevation" | "opacity"
             | "align" | "justify" | "max" | "min" | "direction"
+    )
+}
+
+/// Design tokens that are unambiguously design-only — never valid as member names.
+/// Used to stop expression postfix parsing at `.bold`, `.accent`, etc.
+fn is_unambiguous_design_token(name: &str) -> bool {
+    matches!(
+        name,
+        // These are clearly design tokens, never field/method names
+        "xs" | "sm" | "md" | "lg" | "xl" | "2xl" | "3xl" | "4xl"
+            | "bold" | "semibold" | "italic" | "mono" | "underline" | "strike"
+            | "uppercase" | "lowercase" | "capitalize"
+            | "accent" | "danger" | "warning" | "success" | "info" | "muted"
+            | "rounded" | "smooth" | "pill" | "circle" | "sharp" | "subtle"
+            | "ease" | "spring" | "bounce" | "indeterminate"
+            | "fill" | "fit"
     )
 }
 
