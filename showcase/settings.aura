@@ -1,0 +1,30 @@
+app SettingsApp
+  theme: modern.dark
+
+  screen Main
+    state darkMode: bool = false
+    state notifications: bool = true
+    state volume: int = 75
+    state language: text = "English"
+
+    view
+      column padding.lg gap.md
+        heading "Settings" size.xl .bold
+        column .surface .rounded padding.md gap.sm
+          toggle darkMode label: "Dark Mode"
+          divider .subtle
+          toggle notifications label: "Notifications"
+          divider .subtle
+          row align.center gap.md
+            text "Volume" .medium
+            slider volume min: 0 max: 100 step: 1
+        column .surface .rounded padding.md gap.sm
+          row align.center
+            text "Language" .medium
+            spacer
+            text language .secondary
+        button "Sign Out" .danger .pill padding.top.lg -> signOut()
+
+    action signOut
+      return
+

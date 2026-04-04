@@ -1,0 +1,238 @@
+:root {
+  /* Aura Design Tokens */
+  --spacing-xs: 2px;
+  --spacing-sm: 4px;
+  --spacing-md: 8px;
+  --spacing-lg: 16px;
+  --spacing-xl: 24px;
+  --spacing-2xl: 32px;
+  --spacing-3xl: 48px;
+  --spacing-4xl: 64px;
+
+  --font-xs: 0.75rem;
+  --font-sm: 0.875rem;
+  --font-md: 1rem;
+  --font-lg: 1.125rem;
+  --font-xl: 1.25rem;
+  --font-2xl: 1.5rem;
+  --font-3xl: 2.125rem;
+  --font-display: 3rem;
+
+  --color-primary: #1a1a2e;
+  --color-secondary: #666666;
+  --color-muted: #999999;
+  --color-accent: #6C5CE7;
+  --color-danger: #DC3545;
+  --color-warning: #FFC107;
+  --color-success: #28A745;
+  --color-info: #17A2B8;
+  --color-surface: #FFFFFF;
+  --color-background: #F5F5F5;
+  --color-divider: #E0E0E0;
+
+  --radius-sharp: 0px;
+  --radius-subtle: 4px;
+  --radius-rounded: 8px;
+  --radius-smooth: 12px;
+  --radius-pill: 9999px;
+
+  --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'SF Mono', 'Fira Code', monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-primary: #FFFFFF;
+    --color-secondary: #AAAAAA;
+    --color-muted: #666666;
+    --color-surface: #1E1E1E;
+    --color-background: #121212;
+    --color-divider: #2C2C2C;
+  }
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--font-family);
+  font-size: var(--font-md);
+  color: var(--color-primary);
+  background-color: var(--color-background);
+  line-height: 1.5;
+  min-height: 100vh;
+}
+
+.aura-column {
+  display: flex;
+  flex-direction: column;
+}
+
+.aura-row {
+  display: flex;
+  flex-direction: row;
+}
+
+.aura-stack {
+  display: grid;
+  grid-template-areas: "stack";
+}
+
+.aura-stack > * {
+  grid-area: stack;
+}
+
+.aura-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+}
+
+.aura-scroll {
+  overflow-y: auto;
+}
+
+.aura-spacer {
+  flex: 1;
+}
+
+.aura-divider {
+  border: none;
+  border-top: 1px solid var(--color-divider);
+  margin: var(--spacing-sm) 0;
+}
+
+.aura-text {
+  color: var(--color-primary);
+}
+
+.aura-heading {
+  font-weight: 700;
+  color: var(--color-primary);
+}
+
+.aura-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-sm) var(--spacing-lg);
+  border: none;
+  border-radius: var(--radius-rounded);
+  font-family: inherit;
+  font-size: var(--font-md);
+  font-weight: 500;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+  background: var(--color-accent);
+  color: white;
+}
+
+.aura-button:hover {
+  opacity: 0.85;
+}
+
+.aura-button.icon {
+  padding: var(--spacing-sm);
+  background: transparent;
+  color: var(--color-primary);
+}
+
+.aura-button.outline {
+  background: transparent;
+  border: 1.5px solid var(--color-accent);
+  color: var(--color-accent);
+}
+
+.aura-button.ghost {
+  background: transparent;
+  color: var(--color-primary);
+}
+
+.aura-input {
+  padding: var(--spacing-sm) var(--spacing-md);
+  border: 1.5px solid var(--color-divider);
+  border-radius: var(--radius-rounded);
+  font-family: inherit;
+  font-size: var(--font-md);
+  color: var(--color-primary);
+  background: var(--color-surface);
+  outline: none;
+  transition: border-color 0.15s ease;
+  width: 100%;
+}
+
+.aura-input:focus {
+  border-color: var(--color-accent);
+}
+
+.aura-checkbox {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--color-accent);
+}
+
+.aura-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px var(--spacing-sm);
+  border-radius: var(--radius-pill);
+  font-size: var(--font-xs);
+  font-weight: 600;
+  background: var(--color-accent);
+  color: white;
+}
+
+.aura-progress {
+  width: 100%;
+  height: 6px;
+  border-radius: var(--radius-pill);
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.aura-progress::-webkit-progress-bar {
+  background: var(--color-divider);
+  border-radius: var(--radius-pill);
+}
+
+.aura-progress::-webkit-progress-value {
+  background: var(--color-accent);
+  border-radius: var(--radius-pill);
+}
+
+/* Semantic color classes */
+.color-accent { color: var(--color-accent); }
+.color-danger { color: var(--color-danger); }
+.color-warning { color: var(--color-warning); }
+.color-success { color: var(--color-success); }
+.color-info { color: var(--color-info); }
+.color-secondary { color: var(--color-secondary); }
+.color-muted { color: var(--color-muted); }
+
+.bg-surface { background-color: var(--color-surface); }
+.bg-accent { background-color: var(--color-accent); }
+.bg-danger { background-color: var(--color-danger); }
+
+.text-bold { font-weight: 700; }
+.text-medium { font-weight: 500; }
+.text-italic { font-style: italic; }
+.text-mono { font-family: var(--font-mono); }
+.text-center { text-align: center; }
+.text-strike { text-decoration: line-through; }
+.text-underline { text-decoration: underline; }
+.text-uppercase { text-transform: uppercase; }
+
+.align-center { align-items: center; }
+.align-start { align-items: flex-start; }
+.align-end { align-items: flex-end; }
+.justify-center { justify-content: center; }
+.justify-between { justify-content: space-between; }
+.justify-end { justify-content: flex-end; }
+
+.rounded { border-radius: var(--radius-rounded); }
+.smooth { border-radius: var(--radius-smooth); }
+.pill { border-radius: var(--radius-pill); }
+.circle { border-radius: 50%; }
+

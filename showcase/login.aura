@@ -1,0 +1,30 @@
+app AuthApp
+  theme: modern.dark
+
+  screen Main
+    state email: text = ""
+    state password: text = ""
+
+    view
+      column gap.lg padding.2xl align.center justify.center
+        icon "lock.circle" size.3xl .accent
+        heading "Welcome Back" size.xl .bold
+        text "Sign in to continue" .secondary
+        column gap.md width.fill
+          textfield email placeholder: "Email address"
+          textfield password placeholder: "Password"
+          button "Sign In" .accent .pill -> login()
+          button.ghost "Forgot Password?" .muted -> forgotPassword()
+        row gap.sm padding.top.lg
+          text "Don't have an account?" .muted
+          button.ghost "Sign Up" .accent -> signUp()
+
+    action login
+      return
+
+    action forgotPassword
+      return
+
+    action signUp
+      return
+

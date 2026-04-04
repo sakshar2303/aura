@@ -1,0 +1,28 @@
+app TimerApp
+  theme: modern.dark
+
+  screen Main
+    state seconds: int = 0
+    state running: bool = false
+
+    view
+      column gap.xl padding.2xl align.center
+        heading "Timer" size.xl .bold
+        text seconds size.display .bold .mono
+        row gap.md
+          if running
+            button "Pause" .warning .pill -> pause()
+          else
+            button "Start" .accent .pill -> start()
+          button "Reset" .surface .pill -> reset()
+
+    action start
+      running = true
+
+    action pause
+      running = false
+
+    action reset
+      seconds = 0
+      running = false
+

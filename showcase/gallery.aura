@@ -1,0 +1,24 @@
+app GalleryApp
+  theme: modern.dark
+
+  screen Main
+    state photos: list[text] = []
+
+    view
+      column padding.md gap.md
+        row align.center
+          heading "Gallery" size.xl .bold
+          spacer
+          button.icon "camera" .accent -> addPhoto()
+        grid gap.sm
+          each photos as photo
+            image photo .rounded
+        if photos.isEmpty
+          column align.center padding.2xl gap.md
+            icon "photo" size.2xl .muted
+            text "No photos yet" .muted
+            button "Take Photo" .accent .pill -> addPhoto()
+
+    action addPhoto
+      photos = photos
+

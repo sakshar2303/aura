@@ -1,0 +1,28 @@
+app ChatApp
+  theme: modern.dark
+
+  model Message
+    text: sanitized
+    isMine: bool = true
+    timestamp: timestamp
+
+  screen Main
+    state messages: list[Message] = []
+    state input: text = ""
+
+    view
+      column
+        heading "Chat" size.xl .bold padding.md
+        scroll padding.md
+          column gap.sm
+            each messages as msg
+              row justify: if msg.isMine then .end else .start
+                text msg.text padding.md .rounded
+        row gap.sm padding.md .surface
+          textfield input placeholder: "Type a message..."
+          button.icon "arrow.up" .accent -> sendMessage()
+
+    action sendMessage
+      messages = messages
+      input = ""
+

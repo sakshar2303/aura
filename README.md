@@ -299,6 +299,28 @@ Every generated file compiles and runs immediately.
 
 ---
 
+## Live Case Studies
+
+**[View all case studies →](https://apps-9fdnzbeqa-100rabhkrs-projects.vercel.app)**
+
+Six apps generated with `aura sketch` and compiled with `aura build --target web`:
+
+| App | Generated With | Lines | Demo |
+|---|---|---|---|
+| Chat Messenger | `aura sketch "chat app with dark mode"` | 28 | [Live](https://apps-9fdnzbeqa-100rabhkrs-projects.vercel.app/chat/) |
+| Weather Forecast | `aura sketch "weather forecast"` | 30 | [Live](https://apps-9fdnzbeqa-100rabhkrs-projects.vercel.app/weather/) |
+| Fitness Timer | `aura sketch "timer app with dark mode"` | 28 | [Live](https://apps-9fdnzbeqa-100rabhkrs-projects.vercel.app/timer/) |
+| Photo Gallery | `aura sketch "photo gallery with dark mode"` | 24 | [Live](https://apps-9fdnzbeqa-100rabhkrs-projects.vercel.app/gallery/) |
+| Login Screen | `aura sketch "login with dark mode"` | 30 | [Live](https://apps-9fdnzbeqa-100rabhkrs-projects.vercel.app/login/) |
+| Settings Panel | `aura sketch "settings with dark mode"` | 30 | [Live](https://apps-9fdnzbeqa-100rabhkrs-projects.vercel.app/settings/) |
+
+Every app above was:
+1. Generated from a single English sentence by `aura sketch`
+2. Compiled to HTML/CSS/JS by `aura build --target web`
+3. Deployed as-is — no manual edits
+
+---
+
 ## Quick Start
 
 ```bash

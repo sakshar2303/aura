@@ -1,0 +1,30 @@
+app WeatherApp
+  theme: modern.light
+
+  screen Main
+    state temperature: int = 72
+    state condition: text = "Sunny"
+    state city: text = "San Francisco"
+
+    view
+      column gap.xl padding.2xl align.center .background
+        text city size.lg .secondary
+        icon "sun.max" size.3xl .warning
+        text temperature size.display .bold
+        text condition .secondary .capitalize
+        divider .subtle
+        heading "Forecast" size.lg .bold padding.top.lg
+        row gap.lg justify.center
+          column align.center gap.xs
+            text "Mon" .muted
+            icon "cloud" .secondary
+            text "68"
+          column align.center gap.xs
+            text "Tue" .muted
+            icon "cloud.rain" .info
+            text "62"
+          column align.center gap.xs
+            text "Wed" .muted
+            icon "sun.max" .warning
+            text "75"
+

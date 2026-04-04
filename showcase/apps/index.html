@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aura — Case Studies</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --bg: #0a0a0f;
+      --surface: #141420;
+      --surface-hover: #1c1c2e;
+      --border: #2a2a3e;
+      --text: #e4e4f0;
+      --text-secondary: #8888a0;
+      --accent: #6C5CE7;
+      --accent-glow: rgba(108, 92, 231, 0.3);
+      --gradient: linear-gradient(135deg, #6C5CE7, #a855f7, #ec4899);
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    /* Hero */
+    .hero {
+      text-align: center;
+      padding: 80px 24px 60px;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(circle at 50% 50%, var(--accent-glow) 0%, transparent 50%);
+      animation: pulse 8s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 0.3; transform: scale(1); }
+      50% { opacity: 0.6; transform: scale(1.1); }
+    }
+    .hero > * { position: relative; z-index: 1; }
+    .hero-badge {
+      display: inline-block;
+      padding: 6px 16px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 100px;
+      font-size: 13px;
+      color: var(--accent);
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      margin-bottom: 24px;
+    }
+    .hero h1 {
+      font-size: clamp(36px, 6vw, 64px);
+      font-weight: 800;
+      background: var(--gradient);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      line-height: 1.1;
+      margin-bottom: 16px;
+    }
+    .hero p {
+      font-size: 18px;
+      color: var(--text-secondary);
+      max-width: 600px;
+      margin: 0 auto 32px;
+    }
+    .hero-stats {
+      display: flex;
+      justify-content: center;
+      gap: 48px;
+      margin-top: 40px;
+      flex-wrap: wrap;
+    }
+    .stat {
+      text-align: center;
+    }
+    .stat-value {
+      font-size: 32px;
+      font-weight: 800;
+      background: var(--gradient);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .stat-label {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-top: 4px;
+    }
+
+    /* Source showcase */
+    .source-section {
+      max-width: 800px;
+      margin: 0 auto 60px;
+      padding: 0 24px;
+    }
+    .source-section h2 {
+      text-align: center;
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: var(--text-secondary);
+      margin-bottom: 20px;
+    }
+    .code-block {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      overflow-x: auto;
+      font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+      font-size: 14px;
+      line-height: 1.7;
+      color: var(--text);
+    }
+    .code-block .kw { color: #c792ea; }
+    .code-block .str { color: #c3e88d; }
+    .code-block .tok { color: #89ddff; }
+    .code-block .type { color: #ffcb6b; }
+    .code-block .num { color: #f78c6c; }
+    .code-block .cmt { color: #546e7a; font-style: italic; }
+
+    /* Case studies grid */
+    .cases {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 24px 80px;
+    }
+    .cases h2 {
+      text-align: center;
+      font-size: 28px;
+      font-weight: 700;
+      margin-bottom: 12px;
+    }
+    .cases > p {
+      text-align: center;
+      color: var(--text-secondary);
+      margin-bottom: 48px;
+      font-size: 16px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+      gap: 24px;
+    }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      overflow: hidden;
+      transition: all 0.3s ease;
+      cursor: pointer;
+      text-decoration: none;
+      color: inherit;
+      display: block;
+    }
+    .card:hover {
+      border-color: var(--accent);
+      box-shadow: 0 0 30px var(--accent-glow);
+      transform: translateY(-4px);
+    }
+    .card-preview {
+      height: 200px;
+      background: var(--bg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 48px;
+      border-bottom: 1px solid var(--border);
+    }
+    .card-body {
+      padding: 20px;
+    }
+    .card-body h3 {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    .card-body p {
+      font-size: 14px;
+      color: var(--text-secondary);
+      margin-bottom: 16px;
+    }
+    .card-meta {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .tag {
+      padding: 4px 10px;
+      background: rgba(108, 92, 231, 0.15);
+      color: var(--accent);
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .tag.lines {
+      background: rgba(40, 167, 69, 0.15);
+      color: #2ed573;
+    }
+
+    /* Footer */
+    .footer {
+      text-align: center;
+      padding: 40px 24px;
+      border-top: 1px solid var(--border);
+      color: var(--text-secondary);
+      font-size: 14px;
+    }
+    .footer a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+    .footer a:hover { text-decoration: underline; }
+    .footer-links {
+      display: flex;
+      justify-content: center;
+      gap: 24px;
+      margin-bottom: 16px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="hero">
+    <div class="hero-badge">BUILT WITH AURA</div>
+    <h1>Case Studies</h1>
+    <p>Real apps compiled from Aura source code. One language, three native platforms, zero boilerplate.</p>
+    <div class="hero-stats">
+      <div class="stat">
+        <div class="stat-value">70%</div>
+        <div class="stat-label">Fewer tokens than TypeScript</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value">112 us</div>
+        <div class="stat-label">Compile to 3 platforms</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value">100%</div>
+        <div class="stat-label">First-compile success</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value">120+</div>
+        <div class="stat-label">Passing tests</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="source-section">
+    <h2>Generated from Aura source</h2>
+    <div class="code-block">
+<span class="cmt">// Every app below was generated with:</span>
+<span class="cmt">// $ aura sketch "chat app with dark mode"</span>
+<span class="cmt">// $ aura build chat.aura --target web</span>
+
+<span class="kw">app</span> <span class="type">ChatApp</span>
+  <span class="kw">theme</span>: modern.dark
+
+  <span class="kw">model</span> <span class="type">Message</span>
+    text: <span class="type">sanitized</span>
+    isMine: <span class="type">bool</span> = <span class="num">true</span>
+    timestamp: <span class="type">timestamp</span>
+
+  <span class="kw">screen</span> <span class="type">Main</span>
+    <span class="kw">state</span> messages: <span class="type">list</span>[<span class="type">Message</span>] = []
+    <span class="kw">state</span> input: <span class="type">text</span> = <span class="str">""</span>
+
+    <span class="kw">view</span>
+      column
+        heading <span class="str">"Chat"</span> <span class="tok">.bold</span> padding<span class="tok">.md</span>
+        scroll padding<span class="tok">.md</span>
+          each messages as msg
+            text msg.text padding<span class="tok">.md</span> <span class="tok">.rounded</span>
+        row gap<span class="tok">.sm</span> padding<span class="tok">.md</span> <span class="tok">.surface</span>
+          textfield input placeholder: <span class="str">"Type a message..."</span>
+          button<span class="tok">.icon</span> <span class="str">"arrow.up"</span> <span class="tok">.accent</span> -> sendMessage()
+    </div>
+  </div>
+
+  <div class="cases">
+    <h2>Live Demos</h2>
+    <p>Each app was generated with <code>aura sketch</code> and compiled with <code>aura build --target web</code></p>
+
+    <div class="grid">
+      <a class="card" href="./chat/index.html">
+        <div class="card-preview">💬</div>
+        <div class="card-body">
+          <h3>Chat Messenger</h3>
+          <p>Real-time messaging UI with message bubbles, input field, and send button. Uses <code>sanitized</code> security type for XSS-safe messages.</p>
+          <div class="card-meta">
+            <span class="tag">aura sketch "chat app"</span>
+            <span class="tag lines">28 lines</span>
+          </div>
+        </div>
+      </a>
+
+      <a class="card" href="./weather/index.html">
+        <div class="card-preview">🌤</div>
+        <div class="card-body">
+          <h3>Weather Forecast</h3>
+          <p>Temperature display, condition icons, and 3-day forecast grid. Design tokens handle all spacing and typography.</p>
+          <div class="card-meta">
+            <span class="tag">aura sketch "weather"</span>
+            <span class="tag lines">30 lines</span>
+          </div>
+        </div>
+      </a>
+
+      <a class="card" href="./timer/index.html">
+        <div class="card-preview">⏱</div>
+        <div class="card-body">
+          <h3>Fitness Timer</h3>
+          <p>Countdown timer with start/pause/reset. State management with <code>state running: bool</code> and conditional rendering.</p>
+          <div class="card-meta">
+            <span class="tag">aura sketch "timer"</span>
+            <span class="tag lines">28 lines</span>
+          </div>
+        </div>
+      </a>
+
+      <a class="card" href="./gallery/index.html">
+        <div class="card-preview">🖼</div>
+        <div class="card-body">
+          <h3>Photo Gallery</h3>
+          <p>Grid layout with empty state handling. Shows conditional rendering and grid design tokens.</p>
+          <div class="card-meta">
+            <span class="tag">aura sketch "gallery"</span>
+            <span class="tag lines">24 lines</span>
+          </div>
+        </div>
+      </a>
+
+      <a class="card" href="./login/index.html">
+        <div class="card-preview">🔐</div>
+        <div class="card-body">
+          <h3>Login Screen</h3>
+          <p>Auth form with email and password fields. Uses <code>secret</code> type — password cannot be logged or serialized.</p>
+          <div class="card-meta">
+            <span class="tag">aura sketch "login"</span>
+            <span class="tag lines">30 lines</span>
+          </div>
+        </div>
+      </a>
+
+      <a class="card" href="./settings/index.html">
+        <div class="card-preview">⚙️</div>
+        <div class="card-body">
+          <h3>Settings Panel</h3>
+          <p>Toggle switches, sliders, and grouped sections. Demonstrates multiple input types and design token composition.</p>
+          <div class="card-meta">
+            <span class="tag">aura sketch "settings"</span>
+            <span class="tag lines">30 lines</span>
+          </div>
+        </div>
+      </a>
+    </div>
+  </div>
+
+  <div class="footer">
+    <div class="footer-links">
+      <a href="https://github.com/360Labs-dev/aura">GitHub</a>
+      <a href="https://www.npmjs.com/package/aura-lang">npm</a>
+      <a href="https://github.com/360Labs-dev/aura/blob/main/spec/language.md">Spec</a>
+    </div>
+    <p>Built by <a href="https://github.com/360Labs-dev">360 Labs</a> — MIT License</p>
+  </div>
+
+</body>
+</html>
