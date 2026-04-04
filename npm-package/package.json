@@ -1,0 +1,45 @@
+{
+  "name": "aura-lang",
+  "version": "0.1.0",
+  "description": "The Aura programming language — AI-first, cross-platform, built-in design system. Write once, compile to native SwiftUI, Jetpack Compose, and HTML/CSS/JS.",
+  "author": "360 Labs <dev@360labs.ai>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/360Labs-dev/aura"
+  },
+  "homepage": "https://github.com/360Labs-dev/aura",
+  "bugs": {
+    "url": "https://github.com/360Labs-dev/aura/issues"
+  },
+  "keywords": [
+    "programming-language",
+    "compiler",
+    "cross-platform",
+    "swiftui",
+    "jetpack-compose",
+    "ai",
+    "design-system",
+    "design-tokens",
+    "ui-framework",
+    "code-generation",
+    "native",
+    "ios",
+    "android",
+    "web",
+    "reactive",
+    "aura"
+  ],
+  "main": "index.js",
+  "bin": {
+    "aura-info": "./bin/aura-info.js"
+  },
+  "files": [
+    "index.js",
+    "bin/",
+    "examples/",
+    "syntaxes/",
+    "README.md",
+    "LICENSE"
+  ]
+}
