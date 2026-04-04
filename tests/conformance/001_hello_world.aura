@@ -1,0 +1,4 @@
+app Hello
+  screen Main
+    view
+      text "Hello, Aura!"

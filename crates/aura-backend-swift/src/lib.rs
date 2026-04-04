@@ -2,17 +2,19 @@
 //!
 //! Generates SwiftUI code from Aura HIR.
 //!
-//! ## Strategy
-//! This backend consumes HIR directly (not LIR) because SwiftUI has native
-//! equivalents for most Aura HIR concepts:
+//! ## HIR → SwiftUI Mapping
 //! - HIRColumn → VStack
 //! - HIRRow → HStack
-//! - HIRList/Each → List/ForEach
+//! - HIRStack → ZStack
+//! - HIRText → Text
+//! - HIRButton → Button
 //! - HIRTextField → TextField
 //! - HIRToggle → Toggle
+//! - HIRCheckbox → Toggle (checkbox style)
+//! - HIRList/Each → ForEach
 //! - HIRNavigate → NavigationLink
-//!
-//! ## Output
-//! A complete Xcode project with SwiftUI views, models, and navigation.
+//! - HIRState → @State
 
-// SwiftUI backend will be implemented in Phase 3.
+mod codegen;
+
+pub use codegen::{compile_to_swift, SwiftOutput};

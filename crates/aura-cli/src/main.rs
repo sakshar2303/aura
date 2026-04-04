@@ -234,9 +234,64 @@ fn build_command(target: &str, path: &str, output_dir: &str, format: Option<&str
             eprintln!();
             eprintln!("  Open {}/index.html in a browser to preview.", output_dir);
         }
+        "ios" | "swift" => {
+            let output = aura_backend_swift::compile_to_swift(&hir);
+
+            let out_path = Path::new(output_dir);
+            std::fs::create_dir_all(out_path).expect("Failed to create output directory");
+
+            std::fs::write(out_path.join(&output.filename), &output.swift)
+                .expect("Failed to write Swift file");
+
+            eprintln!();
+            eprintln!("  Build complete:");
+            eprintln!("    {}/{}  ({} bytes)", output_dir, output.filename, output.swift.len());
+        }
+        "android" | "compose" => {
+            let output = aura_backend_compose::compile_to_compose(&hir);
+
+            let out_path = Path::new(output_dir);
+            std::fs::create_dir_all(out_path).expect("Failed to create output directory");
+
+            std::fs::write(out_path.join(&output.filename), &output.kotlin)
+                .expect("Failed to write Kotlin file");
+
+            eprintln!();
+            eprintln!("  Build complete:");
+            eprintln!("    {}/{}  ({} bytes)", output_dir, output.filename, output.kotlin.len());
+        }
+        "all" => {
+            let out_base = Path::new(output_dir);
+
+            // Web
+            let web_out = out_base.join("web");
+            std::fs::create_dir_all(&web_out).expect("Failed to create web output directory");
+            let web = aura_backend_web::compile_to_web(&hir);
+            std::fs::write(web_out.join("index.html"), &web.html).unwrap();
+            std::fs::write(web_out.join("styles.css"), &web.css).unwrap();
+            std::fs::write(web_out.join("app.js"), &web.js).unwrap();
+
+            // iOS
+            let ios_out = out_base.join("ios");
+            std::fs::create_dir_all(&ios_out).expect("Failed to create ios output directory");
+            let ios = aura_backend_swift::compile_to_swift(&hir);
+            std::fs::write(ios_out.join(&ios.filename), &ios.swift).unwrap();
+
+            // Android
+            let android_out = out_base.join("android");
+            std::fs::create_dir_all(&android_out).expect("Failed to create android output directory");
+            let android = aura_backend_compose::compile_to_compose(&hir);
+            std::fs::write(android_out.join(&android.filename), &android.kotlin).unwrap();
+
+            eprintln!();
+            eprintln!("  Build complete (all platforms):");
+            eprintln!("    {}/web/         (HTML/CSS/JS)", output_dir);
+            eprintln!("    {}/ios/         (SwiftUI)", output_dir);
+            eprintln!("    {}/android/     (Jetpack Compose)", output_dir);
+        }
         _ => {
-            eprintln!("  error: Target '{}' not yet implemented", target);
-            eprintln!("  Available targets: web");
+            eprintln!("  error: Unknown target '{}'", target);
+            eprintln!("  Available targets: web, ios, android, all");
             std::process::exit(1);
         }
     }

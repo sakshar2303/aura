@@ -2,16 +2,17 @@
 //!
 //! Generates Kotlin/Jetpack Compose code from Aura HIR.
 //!
-//! ## Strategy
-//! Consumes HIR directly — Compose has native equivalents:
+//! ## HIR → Compose Mapping
 //! - HIRColumn → Column
 //! - HIRRow → Row
-//! - HIRList/Each → LazyColumn/items
-//! - HIRTextField → TextField
+//! - HIRStack → Box
+//! - HIRText → Text
+//! - HIRButton → Button / IconButton
+//! - HIRTextField → OutlinedTextField
 //! - HIRToggle → Switch
-//! - HIRNavigate → NavController.navigate
-//!
-//! ## Output
-//! Kotlin files with @Composable functions + Gradle build config.
+//! - HIRList/Each → LazyColumn / items
+//! - HIRState → remember { mutableStateOf() }
 
-// Compose backend will be implemented in Phase 3.
+mod codegen;
+
+pub use codegen::{compile_to_compose, ComposeOutput};

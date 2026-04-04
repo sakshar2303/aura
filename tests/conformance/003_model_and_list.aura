@@ -1,0 +1,19 @@
+app Tasks
+  model Task
+    title: text
+    done: bool = false
+  screen Main
+    state tasks: list[Task] = []
+    state input: text = ""
+    view
+      column gap.md padding.lg
+        heading "Tasks"
+        row gap.sm
+          textfield input placeholder: "New task..."
+          button "Add" .accent -> addTask(input)
+        each tasks as task
+          row gap.md align.center
+            checkbox task.done
+            text task.title
+    action addTask(title: text)
+      tasks = tasks

@@ -1,0 +1,14 @@
+app Counter
+  screen Main
+    state count: int = 0
+    view
+      column gap.lg padding.xl align.center
+        heading "Counter" size.2xl
+        text count size.display .bold
+        row gap.md
+          button "−" .accent -> decrement()
+          button "+" .accent -> increment()
+    action increment
+      count = count + 1
+    action decrement
+      count = count - 1

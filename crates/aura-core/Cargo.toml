@@ -17,3 +17,6 @@ unicode-normalization.workspace = true
 
 [dev-dependencies]
 insta.workspace = true
+aura-backend-web = { path = "../aura-backend-web" }
+aura-backend-swift = { path = "../aura-backend-swift" }
+aura-backend-compose = { path = "../aura-backend-compose" }
