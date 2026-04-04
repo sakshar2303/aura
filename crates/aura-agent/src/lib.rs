@@ -1,19 +1,22 @@
 //! # Aura Agent API
 //!
-//! Structured AST mutation protocol for AI coding agents.
-//! Agents operate on the AST directly — no text editing.
+//! JSON-RPC protocol for AI coding agents to interact with Aura programs
+//! structurally — reading ASTs, getting diagnostics with confidence-scored
+//! fixes, and querying completions.
 //!
-//! ## Operations
-//! - `ast.get` — read the full AST
-//! - `ast.query` — query specific nodes
-//! - `ast.insert` — insert a new node
-//! - `ast.modify` — modify an existing node
-//! - `ast.delete` — delete a node
-//! - `ast.batch` — atomic batch mutations
+//! ## Protocol
+//! Communication over stdin/stdout using JSON-RPC 2.0.
 //!
-//! ## Concurrency
-//! - Optimistic concurrency with version numbers
-//! - Rate limiting (100 mutations/sec/agent default)
-//! - All mutations validated against type system before applying
-//!
-//! Phase 4 implementation.
+//! ## Methods
+//! - `ast.get` — Get the full AST as JSON for a source file
+//! - `diagnostics.get` — Get errors/warnings with fix suggestions
+//! - `completions.get` — Get available design tokens, types, and variables
+//! - `hir.get` — Get the HIR (high-level IR) as JSON
+//! - `explain` — Get plain English explanation
+//! - `sketch` — Generate .aura code from a description
+
+mod protocol;
+mod server;
+
+pub use protocol::*;
+pub use server::AgentServer;

@@ -14,5 +14,6 @@ aura-core = { path = "../aura-core" }
 aura-backend-web = { path = "../aura-backend-web" }
 aura-backend-swift = { path = "../aura-backend-swift" }
 aura-backend-compose = { path = "../aura-backend-compose" }
+aura-agent = { path = "../aura-agent" }
 clap.workspace = true
 serde_json.workspace = true

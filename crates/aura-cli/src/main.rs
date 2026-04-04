@@ -72,10 +72,30 @@ enum Commands {
     /// Generate a running prototype from a description
     Sketch { description: String },
 
+    /// Start the Agent API server (JSON-RPC over stdin/stdout)
+    Agent {
+        #[command(subcommand)]
+        action: AgentCommands,
+    },
+
     /// Package management
     Pkg {
         #[command(subcommand)]
         action: PkgCommands,
+    },
+}
+
+#[derive(Subcommand)]
+enum AgentCommands {
+    /// Start JSON-RPC server on stdin/stdout
+    Serve,
+    /// Send a single request (for testing)
+    Call {
+        /// JSON-RPC method name
+        method: String,
+        /// JSON params
+        #[arg(default_value = "{}")]
+        params: String,
     },
 }
 
@@ -104,10 +124,12 @@ fn main() {
         Commands::Explain { file } => explain_command(&file),
         Commands::Diff { a, b } => diff_command(&a, &b),
         Commands::Init { name, template } => init_command(&name, &template),
-        Commands::Doctor => {
-            eprintln!("  aura doctor not yet implemented");
-        }
+        Commands::Doctor => doctor_command(),
         Commands::Sketch { description } => sketch_command(&description),
+        Commands::Agent { action } => match action {
+            AgentCommands::Serve => agent_serve(),
+            AgentCommands::Call { method, params } => agent_call(&method, &params),
+        },
         Commands::Pkg { action } => {
             eprintln!("  aura pkg not yet implemented");
         }
@@ -565,4 +587,143 @@ default = "modern.light"
     eprintln!("    cd {}", name);
     eprintln!("    aura build src/main.aura --target web");
     eprintln!("    aura build src/main.aura --target all");
+}
+
+fn agent_serve() {
+    let server = aura_agent::AgentServer::new();
+    eprintln!("  Aura Agent API v{}", env!("CARGO_PKG_VERSION"));
+    eprintln!("  Listening on stdin/stdout (JSON-RPC 2.0)");
+    eprintln!("  Send {{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"ping\",\"params\":{{}}}} to test");
+    eprintln!();
+
+    let stdin = std::io::stdin();
+    let mut line = String::new();
+    loop {
+        line.clear();
+        match stdin.read_line(&mut line) {
+            Ok(0) => break, // EOF
+            Ok(_) => {
+                let trimmed = line.trim();
+                if trimmed.is_empty() {
+                    continue;
+                }
+                let response = server.handle_json(trimmed);
+                println!("{}", response);
+            }
+            Err(e) => {
+                eprintln!("  error reading stdin: {}", e);
+                break;
+            }
+        }
+    }
+}
+
+fn agent_call(method: &str, params_str: &str) {
+    let params: serde_json::Value = serde_json::from_str(params_str).unwrap_or_else(|e| {
+        eprintln!("  error: Invalid JSON params: {}", e);
+        std::process::exit(1);
+    });
+
+    let server = aura_agent::AgentServer::new();
+    let request = aura_agent::Request {
+        jsonrpc: "2.0".to_string(),
+        id: serde_json::json!(1),
+        method: method.to_string(),
+        params,
+    };
+    let response = server.handle_request(&request);
+    println!("{}", serde_json::to_string_pretty(&response).unwrap());
+}
+
+fn doctor_command() {
+    eprintln!();
+    eprintln!("  Aura Doctor v{}", env!("CARGO_PKG_VERSION"));
+    eprintln!("  Checking development environment...");
+    eprintln!();
+
+    let mut all_ok = true;
+
+    // Check Rust
+    let rust_ok = std::process::Command::new("rustc").arg("--version").output().is_ok();
+    if rust_ok {
+        let version = std::process::Command::new("rustc").arg("--version").output()
+            .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
+            .unwrap_or_default();
+        eprintln!("  [ok] Rust: {}", version);
+    } else {
+        eprintln!("  [!!] Rust: NOT FOUND — install from https://rustup.rs");
+        all_ok = false;
+    }
+
+    // Check Cargo
+    let cargo_ok = std::process::Command::new("cargo").arg("--version").output().is_ok();
+    if cargo_ok {
+        eprintln!("  [ok] Cargo: installed");
+    } else {
+        eprintln!("  [!!] Cargo: NOT FOUND");
+        all_ok = false;
+    }
+
+    // Check for web target (Node.js — optional, for dev server)
+    let node_ok = std::process::Command::new("node").arg("--version").output();
+    match node_ok {
+        Ok(output) if output.status.success() => {
+            let version = String::from_utf8_lossy(&output.stdout).trim().to_string();
+            eprintln!("  [ok] Node.js: {} (for web dev server)", version);
+        }
+        _ => {
+            eprintln!("  [--] Node.js: not found (optional, for web dev server)");
+        }
+    }
+
+    // Check for iOS target (Xcode)
+    let xcode_ok = std::process::Command::new("xcodebuild").arg("-version").output();
+    match xcode_ok {
+        Ok(output) if output.status.success() => {
+            let version = String::from_utf8_lossy(&output.stdout).lines().next().unwrap_or("").to_string();
+            eprintln!("  [ok] Xcode: {} (for iOS/macOS target)", version);
+        }
+        _ => {
+            eprintln!("  [--] Xcode: not found (needed for --target ios)");
+        }
+    }
+
+    // Check for Android target
+    let android_home = std::env::var("ANDROID_HOME").or_else(|_| std::env::var("ANDROID_SDK_ROOT"));
+    match android_home {
+        Ok(path) => {
+            eprintln!("  [ok] Android SDK: {} (for Android target)", path);
+        }
+        Err(_) => {
+            eprintln!("  [--] Android SDK: not found (needed for --target android)");
+        }
+    }
+
+    // Check for iOS target (save result)
+    let ios_ready = std::process::Command::new("xcodebuild")
+        .arg("-version")
+        .output()
+        .map(|o| o.status.success())
+        .unwrap_or(false);
+
+    // Check for Android target (save result)
+    let android_ready = std::env::var("ANDROID_HOME").is_ok() || std::env::var("ANDROID_SDK_ROOT").is_ok();
+
+    // Check Aura itself
+    eprintln!("  [ok] Aura: v{}", env!("CARGO_PKG_VERSION"));
+
+    eprintln!();
+    if all_ok {
+        eprintln!("  All required tools are installed.");
+    } else {
+        eprintln!("  Some required tools are missing. Install them and run `aura doctor` again.");
+    }
+
+    // Target readiness
+    eprintln!();
+    eprintln!("  Target readiness:");
+    eprintln!("    web:     Ready (no external dependencies)");
+    eprintln!("    ios:     {}", if ios_ready { "Ready" } else { "Needs Xcode" });
+    eprintln!("    android: {}", if android_ready { "Ready" } else { "Needs Android SDK" });
+    eprintln!();
 }
