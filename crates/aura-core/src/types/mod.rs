@@ -26,6 +26,8 @@ pub enum AuraType {
     Named(String),
     /// Function type
     Function(FunctionType),
+    /// Union type: A | B (value is one of several types)
+    Union(Vec<AuraType>),
     /// Action type (for event handlers)
     Action(Vec<AuraType>),
     /// Type variable (for inference)
@@ -144,6 +146,10 @@ impl AuraType {
                     let p: Vec<_> = params.iter().map(|p| p.display_name()).collect();
                     format!("action({})", p.join(", "))
                 }
+            }
+            AuraType::Union(types) => {
+                let parts: Vec<_> = types.iter().map(|t| t.display_name()).collect();
+                parts.join(" | ")
             }
             AuraType::Var(id) => format!("?T{}", id),
             AuraType::Poison => "<error>".to_string(),

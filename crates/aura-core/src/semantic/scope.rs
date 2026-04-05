@@ -1053,36 +1053,8 @@ impl SemanticAnalyzer {
     // === Type compatibility ===
 
     fn check_type_compat(&mut self, expected: &AuraType, actual: &AuraType, span: Span) {
-        // Poison types are compatible with anything (suppress cascade errors)
-        if expected.is_poison() || actual.is_poison() {
+        if self.types_compatible(expected, actual) {
             return;
-        }
-
-        // Same type is always compatible
-        if expected == actual {
-            return;
-        }
-
-        // Named types are compatible if they have the same name
-        match (expected, actual) {
-            (AuraType::Named(a), AuraType::Named(b)) if a == b => return,
-            (AuraType::List(a), AuraType::List(b)) => {
-                self.check_type_compat(a, b, span);
-                return;
-            }
-            (AuraType::Optional(a), AuraType::Optional(b)) => {
-                self.check_type_compat(a, b, span);
-                return;
-            }
-            // nil/poison optional is compatible with any optional
-            (AuraType::Optional(_), AuraType::Optional(inner)) if inner.is_poison() => return,
-            _ => {}
-        }
-
-        // Int/Float coercion is NOT allowed (explicit in spec)
-        // but we'll be lenient about Named types during early development
-        if matches!(expected, AuraType::Named(_)) || matches!(actual, AuraType::Named(_)) {
-            return; // Defer full named type checking until we have model field resolution
         }
 
         self.error(
@@ -1118,6 +1090,78 @@ impl SemanticAnalyzer {
     }
 
     // === Error helpers ===
+
+    /// Check if two types are compatible (structural typing + union support).
+    ///
+    /// Like TypeScript: structural compatibility, not nominal.
+    /// - Poison is compatible with anything (error recovery)
+    /// - Same type is always compatible
+    /// - Named types with same name are compatible
+    /// - Collections check inner type recursively
+    /// - Optional[T] accepts T and nil
+    /// - Union[A, B] accepts A or B individually
+    /// - Named types are lenient (defer to runtime) during early development
+    fn types_compatible(&self, expected: &AuraType, actual: &AuraType) -> bool {
+        // Poison is compatible with anything
+        if expected.is_poison() || actual.is_poison() {
+            return true;
+        }
+
+        // Same type
+        if expected == actual {
+            return true;
+        }
+
+        match (expected, actual) {
+            // Named types with same name
+            (AuraType::Named(a), AuraType::Named(b)) if a == b => true,
+
+            // Collections — check inner types
+            (AuraType::List(a), AuraType::List(b)) => self.types_compatible(a, b),
+            (AuraType::Set(a), AuraType::Set(b)) => self.types_compatible(a, b),
+            (AuraType::Map(ak, av), AuraType::Map(bk, bv)) => {
+                self.types_compatible(ak, bk) && self.types_compatible(av, bv)
+            }
+
+            // Optional — T is assignable to Optional[T], nil is assignable to any Optional
+            (AuraType::Optional(inner), other) => {
+                self.types_compatible(inner, other) || other.is_poison()
+            }
+            (_, AuraType::Optional(inner)) if inner.is_poison() => true, // nil literal
+
+            // UNION TYPES: A | B accepts A or B
+            (AuraType::Union(variants), actual) => {
+                variants.iter().any(|v| self.types_compatible(v, actual))
+            }
+            (expected, AuraType::Union(variants)) => {
+                variants.iter().any(|v| self.types_compatible(expected, v))
+            }
+
+            // STRUCTURAL TYPING: Named types are lenient
+            // (full structural check would require model field lookup across scopes)
+            (AuraType::Named(_), _) | (_, AuraType::Named(_)) => true,
+
+            // Function type compatibility
+            (AuraType::Function(a), AuraType::Function(b)) => {
+                a.params.len() == b.params.len()
+                    && a.params.iter().zip(&b.params).all(|(ap, bp)| self.types_compatible(ap, bp))
+                    && self.types_compatible(&a.return_type, &b.return_type)
+            }
+
+            // Action compatibility
+            (AuraType::Action(a), AuraType::Action(b)) => {
+                a.len() == b.len()
+                    && a.iter().zip(b).all(|(ap, bp)| self.types_compatible(ap, bp))
+            }
+
+            // Enum compatibility (same variants)
+            (AuraType::Enum(a), AuraType::Enum(b)) => {
+                a.iter().all(|av| b.iter().any(|bv| bv.name == av.name))
+            }
+
+            _ => false,
+        }
+    }
 
     /// Apply type narrowing based on a condition expression.
     ///

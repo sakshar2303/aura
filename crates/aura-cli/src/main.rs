@@ -626,12 +626,13 @@ default = "modern.light"
 fn run_command(target: &str, port: u16) {
     use std::io::{Read as _, Write as _};
     use std::net::TcpListener;
+    use std::sync::atomic::{AtomicBool, Ordering};
+    use std::sync::Arc;
 
     // Find .aura file
     let source_file = if Path::new("src/main.aura").exists() {
         "src/main.aura".to_string()
     } else {
-        // Find any .aura file in current dir
         let mut found = None;
         if let Ok(entries) = std::fs::read_dir(".") {
             for entry in entries.flatten() {
@@ -644,43 +645,93 @@ fn run_command(target: &str, port: u16) {
         match found {
             Some(f) => f,
             None => {
-                eprintln!("  error: No .aura file found. Create src/main.aura or specify a file.");
+                eprintln!("  error: No .aura file found.");
                 std::process::exit(1);
             }
         }
     };
 
+    let build_dir = "build/dev";
+
     eprintln!();
-    eprintln!("  aura run — dev server");
+    eprintln!("  aura run — dev server with file watching");
     eprintln!("  Source: {}", source_file);
     eprintln!();
 
-    // Build
-    let build_dir = "build/dev";
+    // Initial build
     build_command(target, &source_file, build_dir, None);
 
-    // Inject live-reload script into HTML
+    // Inject live-reload script
     let html_path = Path::new(build_dir).join("index.html");
     if let Ok(html) = std::fs::read_to_string(&html_path) {
-        let reload_script = format!(
-            "<script>setInterval(()=>fetch('/ping').catch(()=>location.reload()),2000)</script>"
-        );
+        let reload_script = "<script>setInterval(()=>fetch('/__reload').then(r=>r.text()).then(v=>{if(v==='yes')location.reload()}),500)</script>";
         let patched = html.replace("</body>", &format!("{}\n</body>", reload_script));
         std::fs::write(&html_path, patched).ok();
     }
 
-    // Start HTTP server
+    // File watcher — rebuild on .aura file changes
+    let changed = Arc::new(AtomicBool::new(false));
+    let changed_clone = changed.clone();
+    let source_clone = source_file.clone();
+    let target_clone = target.to_string();
+
+    std::thread::spawn(move || {
+        use notify::{Watcher, RecursiveMode, Event, EventKind};
+        let (tx, rx) = std::sync::mpsc::channel();
+
+        let mut watcher = notify::recommended_watcher(move |res: Result<Event, _>| {
+            if let Ok(event) = res {
+                if matches!(event.kind, EventKind::Modify(_) | EventKind::Create(_)) {
+                    let has_aura = event.paths.iter().any(|p| {
+                        p.extension().map(|e| e == "aura").unwrap_or(false)
+                    });
+                    if has_aura {
+                        tx.send(()).ok();
+                    }
+                }
+            }
+        }).expect("Failed to create file watcher");
+
+        // Watch current directory and src/
+        watcher.watch(Path::new("."), RecursiveMode::Recursive).ok();
+
+        eprintln!("  Watching for file changes...");
+
+        loop {
+            // Wait for a change event
+            if rx.recv().is_err() { break; }
+            // Debounce: wait 200ms for more changes
+            std::thread::sleep(std::time::Duration::from_millis(200));
+            while rx.try_recv().is_ok() {} // drain extra events
+
+            eprintln!();
+            eprintln!("  File changed — rebuilding...");
+            build_command(&target_clone, &source_clone, "build/dev", None);
+
+            // Re-inject reload script
+            let html_path = Path::new("build/dev").join("index.html");
+            if let Ok(html) = std::fs::read_to_string(&html_path) {
+                let reload_script = "<script>setInterval(()=>fetch('/__reload').then(r=>r.text()).then(v=>{if(v==='yes')location.reload()}),500)</script>";
+                let patched = html.replace("</body>", &format!("{}\n</body>", reload_script));
+                std::fs::write(&html_path, patched).ok();
+            }
+
+            changed_clone.store(true, Ordering::SeqCst);
+            eprintln!("  Ready — browser will reload automatically");
+        }
+    });
+
+    // HTTP server
     let addr = format!("127.0.0.1:{}", port);
     let listener = match TcpListener::bind(&addr) {
         Ok(l) => l,
         Err(e) => {
             eprintln!("  error: Cannot bind to {}: {}", addr, e);
-            eprintln!("  hint: Try a different port with -p");
             std::process::exit(1);
         }
     };
 
-    eprintln!("  Server running at http://{}", addr);
+    eprintln!("  Server: http://localhost:{}", port);
     eprintln!("  Press Ctrl+C to stop");
     eprintln!();
 
@@ -690,17 +741,24 @@ fn run_command(target: &str, port: u16) {
             let n = stream.read(&mut buf).unwrap_or(0);
             let request = String::from_utf8_lossy(&buf[..n]);
 
-            // Parse request path
             let path = request
                 .lines()
                 .next()
                 .and_then(|line| line.split_whitespace().nth(1))
                 .unwrap_or("/");
 
+            // Live-reload endpoint
+            if path == "/__reload" {
+                let should_reload = changed.swap(false, Ordering::SeqCst);
+                let body = if should_reload { "yes" } else { "no" };
+                let response = format!("HTTP/1.1 200 OK\r\nContent-Length: {}\r\nAccess-Control-Allow-Origin: *\r\n\r\n{}", body.len(), body);
+                stream.write_all(response.as_bytes()).ok();
+                continue;
+            }
+
             let file_path = if path == "/" || path == "/index.html" {
                 format!("{}/index.html", build_dir)
             } else if path == "/ping" {
-                // Live-reload ping
                 let response = "HTTP/1.1 200 OK\r\nContent-Length: 2\r\n\r\nok";
                 stream.write_all(response.as_bytes()).ok();
                 continue;
