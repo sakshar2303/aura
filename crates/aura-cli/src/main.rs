@@ -140,6 +140,24 @@ fn build_command(target: &str, path: &str, output_dir: &str, format: Option<&str
     eprintln!();
     eprintln!("  aura build v{}", env!("CARGO_PKG_VERSION"));
     eprintln!("  {} → {}", path, target);
+
+    // Incremental compilation: check cache
+    let project_root = Path::new(path)
+        .parent()
+        .and_then(|p| p.parent())
+        .unwrap_or(Path::new("."));
+    if let Some(manifest) = aura_core::cache::BuildManifest::load(project_root) {
+        let source_content = std::fs::read_to_string(path).unwrap_or_default();
+        let current_hash = aura_core::cache::hash_source(&source_content);
+        let files = vec![(path.to_string(), current_hash.clone())];
+        let check = manifest.check(&files);
+        if check.is_clean() {
+            eprintln!("  [cached] No changes detected — skipping rebuild");
+            eprintln!();
+            return;
+        }
+        eprintln!("  [incremental] {}", check.summary());
+    }
     eprintln!();
 
     // Read source
@@ -309,6 +327,24 @@ fn build_command(target: &str, path: &str, output_dir: &str, format: Option<&str
             std::process::exit(1);
         }
     }
+
+    // Save build cache for incremental compilation
+    let source_for_cache = std::fs::read_to_string(path).unwrap_or_default();
+    let mut manifest = aura_core::cache::BuildManifest::load(project_root)
+        .unwrap_or_else(aura_core::cache::BuildManifest::new);
+    manifest.update_file(
+        path,
+        &aura_core::cache::hash_source(&source_for_cache),
+        0,
+        true,
+        true,
+        Vec::new(),
+    );
+    manifest.last_build = std::time::SystemTime::now()
+        .duration_since(std::time::SystemTime::UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0);
+    let _ = manifest.save(project_root);
 }
 
 fn print_error_text(err: &aura_core::AuraError, source: &str, file: &str) {

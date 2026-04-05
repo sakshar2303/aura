@@ -8,6 +8,7 @@
 //! ```
 
 pub mod ast;
+pub mod cache;
 pub mod design;
 pub mod diff;
 pub mod errors;
