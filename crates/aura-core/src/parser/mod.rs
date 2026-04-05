@@ -1504,6 +1504,28 @@ impl Parser {
     // === Type expressions ===
 
     fn parse_type_expr(&mut self) -> Option<TypeExpr> {
+        let first = self.parse_type_primary()?;
+
+        // Check for union type: type1 | type2 | type3
+        if self.check(&Token::Bar) {
+            let span = self.peek_span();
+            let mut types = vec![first];
+            while self.eat(&Token::Bar) {
+                types.push(self.parse_type_primary()?);
+            }
+            // Represent union as a named type with " | " joined name
+            // The type checker resolves this via AuraType::Union
+            let union_name = types.iter().map(|t| match t {
+                TypeExpr::Named(n, _) => n.clone(),
+                _ => "unknown".to_string(),
+            }).collect::<Vec<_>>().join(" | ");
+            return Some(TypeExpr::Named(union_name, span));
+        }
+
+        Some(first)
+    }
+
+    fn parse_type_primary(&mut self) -> Option<TypeExpr> {
         let span = self.peek_span();
 
         match self.peek()?.clone() {

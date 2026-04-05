@@ -200,6 +200,8 @@ pub enum RawToken {
     FatArrow,
     #[token("|>")]
     Pipe,
+    #[token("|")]
+    Bar,
     #[token("::")]
     ColonColon,
     #[token("??")]
@@ -403,6 +405,7 @@ pub enum Token {
     Arrow,
     FatArrow,
     Pipe,
+    Bar,
     ColonColon,
     DotDot,
     Spread,
@@ -533,6 +536,7 @@ impl Token {
             RawToken::Arrow => Token::Arrow,
             RawToken::FatArrow => Token::FatArrow,
             RawToken::Pipe => Token::Pipe,
+            RawToken::Bar => Token::Bar,
             RawToken::ColonColon => Token::ColonColon,
             RawToken::DotDot => Token::DotDot,
             RawToken::Spread => Token::Spread,

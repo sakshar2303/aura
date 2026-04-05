@@ -93,7 +93,7 @@ impl SymbolTable {
         self.scopes[scope].symbols.insert(symbol.name.clone(), symbol);
     }
 
-    fn lookup(&self, scope: usize, name: &str) -> Option<&Symbol> {
+    pub fn lookup(&self, scope: usize, name: &str) -> Option<&Symbol> {
         let s = &self.scopes[scope];
         if let Some(sym) = s.symbols.get(name) {
             return Some(sym);

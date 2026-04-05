@@ -20,6 +20,8 @@ impl AgentServer {
             "hir.get" => self.handle_hir_get(&request.id, &request.params),
             "explain" => self.handle_explain(&request.id, &request.params),
             "sketch" => self.handle_sketch(&request.id, &request.params),
+            "hover" => self.handle_hover(&request.id, &request.params),
+            "goto.definition" => self.handle_goto_definition(&request.id, &request.params),
             "ping" => Response::success(request.id.clone(), json!({ "status": "ok", "version": env!("CARGO_PKG_VERSION") })),
             _ => Response::error(
                 request.id.clone(),
@@ -290,6 +292,130 @@ impl AgentServer {
         let code = aura_core::sketch::sketch(description);
         Response::success(id.clone(), json!({ "code": code }))
     }
+
+    fn handle_hover(&self, id: &serde_json::Value, params: &serde_json::Value) -> Response {
+        let source = match params.get("source").and_then(|s| s.as_str()) {
+            Some(s) => s,
+            None => return Response::error(id.clone(), -32602, "Missing 'source' parameter".to_string()),
+        };
+        let line = params.get("line").and_then(|l| l.as_u64()).unwrap_or(1) as usize;
+        let column = params.get("column").and_then(|c| c.as_u64()).unwrap_or(1) as usize;
+
+        // Find the byte offset for the given line:column
+        let byte_offset = line_col_to_byte(source, line, column);
+
+        // Parse and analyze
+        let result = aura_core::parser::parse(source);
+        if let Some(ref program) = result.program {
+            let analysis = aura_core::semantic::SemanticAnalyzer::new().analyze(program);
+
+            // Find the token/identifier at this position
+            let lex_result = aura_core::lexer::lex(source);
+            let mut hover_info = None;
+
+            for token in &lex_result.tokens {
+                if token.span.start <= byte_offset && byte_offset < token.span.end {
+                    match &token.value {
+                        aura_core::lexer::Token::Ident(name) | aura_core::lexer::Token::TypeIdent(name) => {
+                            // Look up in symbol table
+                            if let Some(sym) = analysis.symbols.lookup(0, name) {
+                                hover_info = Some(json!({
+                                    "name": name,
+                                    "kind": format!("{:?}", sym.kind),
+                                    "type": sym.resolved_type.display_name(),
+                                    "line": line,
+                                    "column": column,
+                                }));
+                            } else {
+                                hover_info = Some(json!({
+                                    "name": name,
+                                    "kind": "unknown",
+                                    "type": null,
+                                    "line": line,
+                                    "column": column,
+                                }));
+                            }
+                        }
+                        // Design tokens
+                        aura_core::lexer::Token::Dot => {
+                            hover_info = Some(json!({
+                                "name": ".",
+                                "kind": "design_token",
+                                "type": "design token prefix",
+                            }));
+                        }
+                        other => {
+                            hover_info = Some(json!({
+                                "name": format!("{}", other),
+                                "kind": "keyword",
+                                "type": null,
+                            }));
+                        }
+                    }
+                    break;
+                }
+            }
+
+            match hover_info {
+                Some(info) => Response::success(id.clone(), json!({ "hover": info })),
+                None => Response::success(id.clone(), json!({ "hover": null })),
+            }
+        } else {
+            Response::error(id.clone(), -32000, "Parse failed".to_string())
+        }
+    }
+
+    fn handle_goto_definition(&self, id: &serde_json::Value, params: &serde_json::Value) -> Response {
+        let source = match params.get("source").and_then(|s| s.as_str()) {
+            Some(s) => s,
+            None => return Response::error(id.clone(), -32602, "Missing 'source' parameter".to_string()),
+        };
+        let line = params.get("line").and_then(|l| l.as_u64()).unwrap_or(1) as usize;
+        let column = params.get("column").and_then(|c| c.as_u64()).unwrap_or(1) as usize;
+
+        let byte_offset = line_col_to_byte(source, line, column);
+
+        let result = aura_core::parser::parse(source);
+        if let Some(ref program) = result.program {
+            let analysis = aura_core::semantic::SemanticAnalyzer::new().analyze(program);
+
+            let lex_result = aura_core::lexer::lex(source);
+            for token in &lex_result.tokens {
+                if token.span.start <= byte_offset && byte_offset < token.span.end {
+                    if let aura_core::lexer::Token::Ident(name) | aura_core::lexer::Token::TypeIdent(name) = &token.value {
+                        if let Some(sym) = analysis.symbols.lookup(0, name) {
+                            let (def_line, def_col) = byte_to_line_col(source, sym.span.start);
+                            return Response::success(id.clone(), json!({
+                                "definition": {
+                                    "name": name,
+                                    "line": def_line,
+                                    "column": def_col,
+                                    "kind": format!("{:?}", sym.kind),
+                                }
+                            }));
+                        }
+                    }
+                    break;
+                }
+            }
+
+            Response::success(id.clone(), json!({ "definition": null }))
+        } else {
+            Response::error(id.clone(), -32000, "Parse failed".to_string())
+        }
+    }
+}
+
+fn line_col_to_byte(source: &str, target_line: usize, target_col: usize) -> usize {
+    let mut line = 1;
+    let mut col = 1;
+    for (i, ch) in source.char_indices() {
+        if line == target_line && col == target_col {
+            return i;
+        }
+        if ch == '\n' { line += 1; col = 1; } else { col += 1; }
+    }
+    source.len()
 }
 
 fn byte_to_line_col(source: &str, byte_offset: usize) -> (usize, usize) {
