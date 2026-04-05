@@ -1,0 +1,41 @@
+name: Update Snapshots
+
+on:
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: 'Reason for snapshot update'
+        required: true
+
+jobs:
+  update:
+    name: Update snapshot baselines
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Install cargo-insta
+        run: cargo install cargo-insta
+      - name: Update snapshots
+        run: cargo insta test --accept -p aura-core --test snapshots
+      - name: Check for changes
+        id: check
+        run: |
+          if git diff --quiet; then
+            echo "changed=false" >> $GITHUB_OUTPUT
+          else
+            echo "changed=true" >> $GITHUB_OUTPUT
+          fi
+      - name: Create PR with updated snapshots
+        if: steps.check.outputs.changed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b update-snapshots-$(date +%Y%m%d)
+          git add -A
+          git commit -m "chore: update snapshot baselines - ${{ github.event.inputs.reason }}"
+          git push origin HEAD
+          gh pr create --title "Update snapshot baselines" --body "Reason: ${{ github.event.inputs.reason }}" --base main
+        env:
+          GH_TOKEN: ${{ github.token }}

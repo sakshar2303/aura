@@ -1,0 +1,102 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: -Dwarnings
+
+jobs:
+  test:
+    name: Test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Run tests
+        run: cargo test --workspace
+      - name: Run conformance tests
+        run: cargo test -p aura-core --test conformance
+      - name: Run snapshot tests
+        run: cargo test -p aura-core --test snapshots
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+      - uses: Swatinem/rust-cache@v2
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+      - name: Run clippy
+        run: cargo clippy --workspace -- -D warnings
+
+  build:
+    name: Build release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Build release
+        run: cargo build --release --workspace
+      - name: Upload CLI binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: aura-linux
+          path: target/release/aura
+
+  benchmark:
+    name: Benchmark
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Run benchmarks
+        run: cargo run --release --bin aura-bench
+
+  compile-examples:
+    name: Compile examples
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Build compiler
+        run: cargo build --release --bin aura
+      - name: Compile all examples to web
+        run: |
+          for f in examples/*.aura; do
+            echo "Building $f..."
+            ./target/release/aura build "$f" --target web -o "/tmp/aura-$(basename $f .aura)"
+          done
+      - name: Compile all examples to iOS
+        run: |
+          for f in examples/*.aura; do
+            echo "Building $f → iOS..."
+            ./target/release/aura build "$f" --target ios -o "/tmp/aura-ios-$(basename $f .aura)"
+          done
+      - name: Compile all examples to Android
+        run: |
+          for f in examples/*.aura; do
+            echo "Building $f → Android..."
+            ./target/release/aura build "$f" --target android -o "/tmp/aura-android-$(basename $f .aura)"
+          done
+      - name: Verify outputs exist
+        run: |
+          ls /tmp/aura-minimal/index.html
+          ls /tmp/aura-ios-minimal/*.swift
+          ls /tmp/aura-android-minimal/*.kt

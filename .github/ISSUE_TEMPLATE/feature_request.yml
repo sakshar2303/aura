@@ -1,0 +1,39 @@
+name: Feature Request
+description: Suggest a new feature or improvement
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: Feature description
+      description: What should Aura be able to do?
+    validations:
+      required: true
+  - type: textarea
+    id: example
+    attributes:
+      label: Example usage
+      description: Show how this feature would look in .aura code.
+      render: text
+  - type: dropdown
+    id: category
+    attributes:
+      label: Category
+      options:
+        - Language syntax
+        - Type system
+        - Design tokens
+        - New backend
+        - CLI tooling
+        - Editor support
+        - Package manager
+        - Performance
+        - Documentation
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Any workarounds or alternative approaches?

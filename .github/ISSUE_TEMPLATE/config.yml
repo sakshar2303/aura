@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Language Specification
+    url: https://github.com/360Labs-dev/aura/blob/main/spec/language.md
+    about: Read the full Aura language specification
+  - name: Contributing Guide
+    url: https://github.com/360Labs-dev/aura/blob/main/CONTRIBUTING.md
+    about: How to contribute to Aura
