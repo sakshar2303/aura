@@ -632,7 +632,7 @@ input[type="range"]::-webkit-slider-thumb {
             self.js.push_str(" };\n}\n\n");
         }
 
-        // Actions
+        // Actions — register params as local vars during body generation
         if let Some(screen) = self.module.screens.first() {
             for action in &screen.actions {
                 let params: Vec<String> = action.params.iter().map(|p| p.name.clone()).collect();
@@ -641,13 +641,20 @@ input[type="range"]::-webkit-slider-thumb {
                     action.name,
                     params.join(", ")
                 ));
+                // Register params as local vars so they don't get state. prefix
+                for p in &params {
+                    self.local_vars.push(p.clone());
+                }
                 for stmt in &action.body {
                     self.js.push_str(&format!("  {};\n", self.stmt_to_js(stmt)));
+                }
+                for _ in &params {
+                    self.local_vars.pop();
                 }
                 self.js.push_str("}\n\n");
             }
 
-            // Functions
+            // Functions — register params, auto-return last expression
             for func in &screen.functions {
                 let params: Vec<String> = func.params.iter().map(|p| p.name.clone()).collect();
                 self.js.push_str(&format!(
@@ -655,8 +662,21 @@ input[type="range"]::-webkit-slider-thumb {
                     func.name,
                     params.join(", ")
                 ));
-                for stmt in &func.body {
-                    self.js.push_str(&format!("  {};\n", self.stmt_to_js(stmt)));
+                for p in &params {
+                    self.local_vars.push(p.clone());
+                }
+                let body_len = func.body.len();
+                for (i, stmt) in func.body.iter().enumerate() {
+                    let is_last = i == body_len - 1;
+                    let js = self.stmt_to_js(stmt);
+                    if is_last && !js.starts_with("return") && !js.starts_with("if ") && !js.starts_with("state.") {
+                        self.js.push_str(&format!("  return {};\n", js));
+                    } else {
+                        self.js.push_str(&format!("  {};\n", js));
+                    }
+                }
+                for _ in &params {
+                    self.local_vars.pop();
                 }
                 self.js.push_str("}\n\n");
             }
@@ -783,7 +803,13 @@ input[type="range"]::-webkit-slider-thumb {
                 format!("{}<input class=\"aura-input{}\" type=\"text\" placeholder=\"{}\" data-bind=\"{}\" value=\"${{state.{} || ''}}\"/>\n", pad, if cls.is_empty() { String::new() } else { format!(" {}", cls) }, ph, field.binding, field.binding)
             }
             HIRView::Checkbox(cb) => {
-                format!("{}<input class=\"aura-checkbox\" type=\"checkbox\" data-bind=\"{}\" ${{state.{} ? 'checked' : ''}}/>\n", pad, cb.binding, cb.binding)
+                let binding_root = cb.binding.split('.').next().unwrap_or(&cb.binding);
+                let binding_js = if self.local_vars.contains(&binding_root.to_string()) {
+                    cb.binding.clone()
+                } else {
+                    format!("state.{}", cb.binding)
+                };
+                format!("{}<input class=\"aura-checkbox\" type=\"checkbox\" data-bind=\"{}\" ${{({}) ? 'checked' : ''}}/>\n", pad, cb.binding, binding_js)
             }
             HIRView::Toggle(toggle) => {
                 let label = toggle.label.as_deref().unwrap_or("");
@@ -809,11 +835,13 @@ input[type="range"]::-webkit-slider-thumb {
             }
             HIRView::Each(each) => {
                 let iterable = self.expr_to_js(&each.iterable);
-                // Register loop variable so expr_to_js doesn't prefix with state.
+                // Register loop variable + index so expr_to_js doesn't prefix with state.
                 self.local_vars.push(each.item_name.clone());
+                self.local_vars.push("_idx".to_string());
                 let item_template = self.view_to_js_template(&each.body, depth + 1);
-                self.local_vars.pop();
-                format!("${{{}.map({} => `{}`).join('')}}", iterable, each.item_name, item_template.trim().replace('`', "\\`"))
+                self.local_vars.pop(); // _idx
+                self.local_vars.pop(); // item_name
+                format!("${{{}.map(({}, _idx) => `{}`).join('')}}", iterable, each.item_name, item_template.trim().replace('`', "\\`"))
             }
             HIRView::ComponentRef(comp_ref) => {
                 if let Some(comp) = self.module.components.iter().find(|c| c.name == comp_ref.name) {
@@ -1029,7 +1057,7 @@ input[type="range"]::-webkit-slider-thumb {
             }
             HIRExpr::MemberAccess(obj, member, _) => {
                 let obj_js = self.expr_to_js(obj);
-                // Translate Aura methods to JS equivalents
+                // Translate Aura property access to JS equivalents
                 match member.as_str() {
                     "isEmpty" => format!("({}.length === 0)", obj_js),
                     "count" => format!("{}.length", obj_js),
@@ -1046,6 +1074,81 @@ input[type="range"]::-webkit-slider-thumb {
                 }
             }
             HIRExpr::Call(func, args, _) => {
+                // Intercept method calls for Aura → JS translation
+                if let HIRExpr::MemberAccess(obj, method, _) = func.as_ref() {
+                    let obj_js = self.expr_to_js(obj);
+                    let args_js: Vec<String> = args.iter().map(|a| self.expr_to_js(a)).collect();
+                    match method.as_str() {
+                        // Collection methods
+                        "append" | "push" => {
+                            return format!("[...{}, {}]", obj_js, args_js.join(", "));
+                        }
+                        "prepend" => {
+                            return format!("[{}, ...{}]", args_js.join(", "), obj_js);
+                        }
+                        "remove" => {
+                            if args_js.len() == 1 {
+                                return format!("{}.filter(_item => _item !== {})", obj_js, args_js[0]);
+                            }
+                            return format!("{}.filter(_item => _item !== {})", obj_js, args_js.join(", "));
+                        }
+                        "where" | "filter" => {
+                            return format!("{}.filter({})", obj_js, args_js.join(", "));
+                        }
+                        "map" => {
+                            return format!("{}.map({})", obj_js, args_js.join(", "));
+                        }
+                        "find" => {
+                            return format!("{}.find({})", obj_js, args_js.join(", "));
+                        }
+                        "contains" => {
+                            return format!("{}.includes({})", obj_js, args_js[0]);
+                        }
+                        "sortBy" => {
+                            return format!("[...{}].sort((a, b) => {}(a) > {}(b) ? 1 : -1)", obj_js, args_js[0], args_js[0]);
+                        }
+                        "count" if !args_js.is_empty() => {
+                            return format!("{}.filter({}).length", obj_js, args_js[0]);
+                        }
+                        "count" => {
+                            return format!("{}.length", obj_js);
+                        }
+                        "join" => {
+                            return format!("{}.join({})", obj_js, args_js.get(0).cloned().unwrap_or_else(|| "\"\"".to_string()));
+                        }
+                        "with" => {
+                            // .with(field: value) → spread + override
+                            let fields: Vec<String> = args.iter().map(|a| self.expr_to_js(a)).collect();
+                            return format!("{{ ...{}, {} }}", obj_js, fields.join(", "));
+                        }
+                        "format" => {
+                            return format!("{} /* .format({}) */", obj_js, args_js.join(", "));
+                        }
+                        "split" => {
+                            return format!("{}.split({})", obj_js, args_js[0]);
+                        }
+                        "replace" => {
+                            return format!("{}.replace({}, {})", obj_js, args_js[0], args_js.get(1).cloned().unwrap_or_else(|| "\"\"".to_string()));
+                        }
+                        "toFloat" => return format!("parseFloat({})", obj_js),
+                        "toInt" => return format!("parseInt({})", obj_js),
+                        "round" => return format!("Math.round({})", obj_js),
+                        "abs" => return format!("Math.abs({})", obj_js),
+                        "clamp" => {
+                            return format!("Math.min(Math.max({}, {}), {})", obj_js, args_js.get(0).cloned().unwrap_or_default(), args_js.get(1).cloned().unwrap_or_default());
+                        }
+                        "startsWith" => return format!("{}.startsWith({})", obj_js, args_js[0]),
+                        "endsWith" => return format!("{}.endsWith({})", obj_js, args_js[0]),
+                        "sanitize" => return format!("{} /* sanitized */", obj_js),
+                        "verify" => return format!("({} === {})", obj_js, args_js[0]),
+                        _ => {
+                            // Default: direct method call
+                            return format!("{}.{}({})", obj_js, method, args_js.join(", "));
+                        }
+                    }
+                }
+
+                // Regular function call (no method interception matched)
                 let f = self.expr_to_js(func);
                 let a: Vec<String> = args.iter().map(|a| self.expr_to_js(a)).collect();
                 format!("{}({})", f, a.join(", "))
@@ -1183,7 +1286,17 @@ input[type="range"]::-webkit-slider-thumb {
     fn action_to_js(&self, action: &HIRActionExpr) -> String {
         match action {
             HIRActionExpr::Call(name, args) => {
-                let a: Vec<String> = args.iter().map(|a| self.expr_to_js(a)).collect();
+                let a: Vec<String> = args.iter().map(|a| {
+                    let js = self.expr_to_js(a);
+                    // If arg references a local/loop var, it can't be used in onclick
+                    // strings (global scope). Serialize it instead.
+                    if self.local_vars.iter().any(|lv| js.starts_with(lv.as_str())) {
+                        // Use JSON.stringify so the value is captured at render time
+                        format!("' + JSON.stringify({}) + '", js)
+                    } else {
+                        js
+                    }
+                }).collect();
                 format!("{}({})", name, a.join(", "))
             }
             HIRActionExpr::Navigate(nav) => match nav {

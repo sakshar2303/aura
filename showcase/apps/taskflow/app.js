@@ -28,12 +28,12 @@ function Task(fields) {
 }
 
 function addTask(title) {
-  state.tasks = state.tasks;
+  state.tasks = [...state.tasks, Task({ title: title })];
   state.input = "";
 }
 
 function deleteTask(task) {
-  state.tasks = state.tasks;
+  state.tasks = state.tasks.filter(_item => _item !== task);
 }
 
 function showAll() {
@@ -49,7 +49,7 @@ function showDone() {
 }
 
 function taskCount() {
-  "0 tasks";
+  return "tasks";
 }
 
 function render() {
@@ -79,13 +79,13 @@ function renderView() {
                 <span class="aura-text text-center" style="text-align: center; align-items: center">taskCount</span>
             </div>
             <div class="aura-column" style="gap: 2px">
-${state.tasks.map(task => `<div class="aura-row text-center" style="gap: 8px; padding: 8px; text-align: center; align-items: center">
-                        <input class="aura-checkbox" type="checkbox" data-bind="task.done" ${state.task.done ? 'checked' : ''}/>
+${state.tasks.map((task, _idx) => `<div class="aura-row text-center" style="gap: 8px; padding: 8px; text-align: center; align-items: center">
+                        <input class="aura-checkbox" type="checkbox" data-bind="task.done" ${(task.done) ? 'checked' : ''}/>
                         <div class="aura-column" style="gap: 2px">
                             <span class="aura-text">${task.title}</span>
                         </div>
                         <div class="aura-spacer"></div>
-                        <button class="aura-button icon color-danger" onclick="deleteTask(task)">${_icon('trash')}</button>
+                        <button class="aura-button icon color-danger" onclick="deleteTask(' + JSON.stringify(task) + ')">${_icon('trash')}</button>
                     </div>`).join('')}            </div>
 ${((state.tasks.length === 0)) ? `<div class="aura-column text-center" style="gap: 8px; padding: 32px; text-align: center; align-items: center">
                 <span class="aura-icon color-muted">${_icon('inbox')}</span>

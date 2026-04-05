@@ -45,14 +45,14 @@ app TaskFlow
             text "Add your first task above" .sm .muted
 
     fn taskCount -> text
-      "0 tasks"
+      "tasks"
 
     action addTask(title: text)
-      tasks = tasks
+      tasks = tasks.append(Task(title: title))
       input = ""
 
     action deleteTask(task: Task)
-      tasks = tasks
+      tasks = tasks.remove(task)
 
     action showAll
       filter = all

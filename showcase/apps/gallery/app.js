@@ -41,7 +41,7 @@ function renderView() {
                 <button class="aura-button icon color-accent" onclick="addPhoto()">${_icon('camera')}</button>
             </div>
             <div class="aura-grid">
-${state.photos.map(photo => `<!-- unsupported -->`).join('')}            </div>
+${state.photos.map((photo, _idx) => `<!-- unsupported -->`).join('')}            </div>
 ${((state.photos.length === 0)) ? `<div class="aura-column text-center" style="gap: 8px; padding: 32px; text-align: center; align-items: center">
                 <span class="aura-icon color-muted">${_icon('photo')}</span>
                 <span class="aura-text color-muted">No photos yet</span>

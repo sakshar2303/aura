@@ -44,7 +44,7 @@ function renderView() {
             <h1 class="aura-heading text-bold" style="padding: 8px; font-size: 1.25rem">Chat</h1>
             <div class="aura-scroll">
                 <div class="aura-column" style="gap: 4px">
-${state.messages.map(msg => `<div class="aura-row" style="">
+${state.messages.map((msg, _idx) => `<div class="aura-row" style="">
                             <span class="aura-text rounded" style="padding: 8px; border-radius: 8px">${msg.text}</span>
                         </div>`).join('')}                </div>
             </div>

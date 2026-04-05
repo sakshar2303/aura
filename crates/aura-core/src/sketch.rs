@@ -106,10 +106,10 @@ fn gen_todo_app(name: &str, theme: &str, desc: &str) -> String {
     }
     s.push_str("\n");
     s.push_str("    action addTodo(title: text)\n");
-    s.push_str("      todos = todos\n\n");
+    s.push_str("      todos = todos.append(Todo(title: title))\n\n");
     if has_swipe {
         s.push_str("    action deleteTodo(todo: Todo)\n");
-        s.push_str("      todos = todos\n");
+        s.push_str("      todos = todos.remove(todo)\n");
     }
 
     s
@@ -168,7 +168,7 @@ fn gen_chat_app(name: &str, theme: &str) -> String {
           button.icon "arrow.up" .accent -> sendMessage()
 
     action sendMessage
-      messages = messages
+      messages = messages.append(Message(text: input))
       input = ""
 "#, name, theme)
 }
@@ -231,7 +231,7 @@ fn gen_notes_app(name: &str, theme: &str) -> String {
             text "Created" size.xs .muted
 
     action addNote
-      notes = notes
+      notes = notes.append(Note(title: "New Note", content: ""))
 "#, name, theme)
 }
 
@@ -351,7 +351,7 @@ fn gen_gallery_app(name: &str, theme: &str) -> String {
             button "Take Photo" .accent .pill -> addPhoto()
 
     action addPhoto
-      photos = photos
+      photos = photos.append("photo.jpg")
 "#, name, theme)
 }
 
